@@ -1,0 +1,14 @@
+##==## OS HARDENING VARIABLES - STAGING ##==##
+hardening_enable_firewall: true
+hardening_firewall_allowed_ports:
+  - 22
+  - 8080
+
+hardening_disable_root_login: false
+hardening_password_policy:
+  min_length: 10
+  require_special_chars: false
+  expire_days: 120
+
+hardening_auditd_enabled: false
+hardening_disable_unused_services: false

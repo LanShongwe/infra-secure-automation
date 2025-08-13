@@ -1,0 +1,9 @@
+# Hardened SSH Configuration
+Port 22
+PermitRootLogin {{ 'no' if hardening_disable_root_login else 'yes' }}
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+UsePAM yes
+X11Forwarding no
+ClientAliveInterval 300
+ClientAliveCountMax 2

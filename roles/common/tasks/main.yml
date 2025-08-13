@@ -1,0 +1,28 @@
+---
+# Installs baseline utilities and optionally create a deploy user (if enabled).
+- name: Ensure baseline packages are present
+  package:
+    name: "{{ common_packages }}"
+    state: present
+  tags: common,packages
+
+- name: Ensure /var/log/infra-secure-maintenance exists
+  file:
+    path: /var/log/infra-secure-maintenance
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  tags: common,logging
+
+# Optionally: Creates a deploy user if defined (not created by default)
+- name: Create deploy user (optional)
+  user:
+    name: "{{ deploy_user.name }}"
+    comment: "Automation deploy user"
+    shell: "{{ deploy_user.shell | default('/bin/bash') }}"
+    groups: "{{ deploy_user.groups | default(omit) }}"
+    state: present
+    create_home: "{{ deploy_user.create_home | default(true) }}"
+  when: deploy_user is defined
+  tags: common,user

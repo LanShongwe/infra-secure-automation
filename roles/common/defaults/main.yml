@@ -1,0 +1,8 @@
+---
+# defaults for common role - safe defaults that can be overridden in inventories/group_vars
+common_packages:
+  - curl
+  - unzip
+  - tar
+  - net-tools
+  - iproute

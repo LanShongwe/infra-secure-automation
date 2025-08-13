@@ -1,0 +1,14 @@
+---
+# Purpose: Apply OS security updates only, no config changes.
+# Safe for frequent execution in maintenance windows.
+- name: Apply OS security patches
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: patch_management
+      vars:
+        patch_security_only: true     # Only security updates (configurable per host/group)
+        patch_reboot_if_needed: true
+        patch_package_exclusions: []  # Packages to skip updating

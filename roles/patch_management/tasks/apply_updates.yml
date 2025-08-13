@@ -1,0 +1,48 @@
+---
+##==## APPLIES UPDATES ACCORDING TO POLICY ##==##
+- name: Debian - upgrade package lists (apt)
+  apt:
+    update_cache: yes
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: apply
+
+# Debian
+#  - security: install 'unattended-upgrades' and run a security upgrade if desired (best effort)
+#  - all: perform a distribution upgrade (safe in controlled maintenance windows).
+- name: Debian - install unattended-upgrades when using security policy
+  apt:
+    name: unattended-upgrades
+    state: present
+  when:
+    - ansible_facts['os_family'] == 'Debian'
+    - patch_policy == 'security'
+  tags: apply
+
+- name: Debian - apply security upgrades via unattended-upgrades (best effort)
+  command: unattended-upgrade -d
+  when:
+    - ansible_facts['os_family'] == 'Debian'
+    - patch_policy == 'security'
+  register: unattended_result
+  failed_when: false
+  tags: apply
+
+- name: Debian - full distribution upgrade (policy=all)
+  apt:
+    upgrade: dist
+  when:
+    - ansible_facts['os_family'] == 'Debian'
+    - patch_policy == 'all'
+  tags: apply
+
+# RHEL/CentOS: use dnf or yum
+- name: RHEL - apply all package updates (yum/dnf)
+  package:
+    name: "*"
+    state: latest
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: apply
+
+- name: Collect package info after updates (package_facts)
+  package_facts:
+  tags: apply

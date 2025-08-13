@@ -1,0 +1,15 @@
+##==## OS HARDENING VARIABLES - PRODUCTION ##==##
+hardening_enable_firewall: true
+hardening_firewall_allowed_ports:
+  - 22
+  - 80
+  - 443
+
+hardening_disable_root_login: true
+hardening_password_policy:
+  min_length: 14
+  require_special_chars: true
+  expire_days: 90
+
+hardening_auditd_enabled: true
+hardening_disable_unused_services: true

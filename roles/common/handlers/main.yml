@@ -1,0 +1,3 @@
+---
+# Add placeholders for common handlers.
+# Add a handlers here if multiple roles will notify common actions (e.g., rotate logs).

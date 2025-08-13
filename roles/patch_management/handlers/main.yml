@@ -1,0 +1,3 @@
+---
+# Handlers for patch_management (kept minimal - reboots are explicit tasks)
+# Add handlers here if you need service-specific restarts after patching.

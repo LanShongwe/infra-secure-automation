@@ -1,0 +1,33 @@
+---
+##==## CHECKS WHAT UPDATES ARE AVAILABLE ##==##
+- name: Update apt cache (Debian/Ubuntu)
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: check
+
+- name: Show upgradable packages (Debian)
+  command: apt list --upgradable
+  register: apt_upgradable
+  failed_when: false
+  changed_when: false
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: check
+
+- name: Show yum check-update (RHEL/CentOS)
+  command: yum check-update
+  register: yum_check
+  failed_when: false
+  changed_when: false
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: check
+
+- name: Report available updates (debug)
+  debug:
+    msg: |
+      Debian upgradable:
+      {{ apt_upgradable.stdout_lines | default([]) }}
+      RHEL check-update:
+      {{ yum_check.stdout_lines | default([]) }}
+  tags: check

@@ -1,0 +1,20 @@
+---
+- name: List available backups for hosts
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    backup_root: /var/log/infra-secure-maintenance/backups
+  tasks:
+    - name: Find backup runs for host
+      find:
+        paths: "{{ backup_root }}/{{ inventory_hostname }}"
+        file_type: directory
+        depth: 1
+      register: backups
+      failed_when: false
+      changed_when: false
+
+    - name: Show backup list
+      debug:
+        var: backups.files | map(attribute='path') | list

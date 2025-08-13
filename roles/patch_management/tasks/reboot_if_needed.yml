@@ -1,0 +1,44 @@
+---
+##==## DETECTS REBOOT REQUIREMENTS AND REBOOT SAFELY WHEN REQUIRED ##==#
+- name: Check for Debian reboot-required file
+  stat:
+    path: /var/run/reboot-required
+  register: deb_reboot_req
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: reboot
+
+- name: Check for RHEL needs-restarting (if available)
+  command: needs-restarting -r
+  register: rhel_needs_reboot
+  failed_when: false
+  changed_when: false
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: reboot
+
+- name: Decide if reboot is required (set fact)
+  set_fact:
+    reboot_required: >-
+      {{
+        (deb_reboot_req.stat.exists | default(false))
+        or
+        (rhel_needs_reboot.rc != 0 if (rhel_needs_reboot is defined) else false)
+      }}
+  tags: reboot
+
+- name: Reboot host if required
+  reboot:
+    reboot_timeout: 900
+    pre_reboot_delay: 5
+    post_reboot_delay: 20
+    test_command: whoami
+  when:
+    - reboot_required | bool
+    - reboot_after_kernel | bool
+  tags: reboot
+
+- name: Wait for host to come back (extra safety)
+  wait_for_connection:
+    timeout: 600
+    delay: 5
+  when: reboot_required | bool
+  tags: reboot

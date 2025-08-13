@@ -1,0 +1,7 @@
+##==## PATCH MANAGEMENT VARIABLES - DEVELOPMENT ##==##
+patch_check_only: true
+patch_auto_reboot: false
+patch_update_cache: false
+
+patch_exclude_packages: []
+patch_notification_email: dev-team@example.com

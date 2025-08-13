@@ -1,0 +1,16 @@
+---
+##==## HANDLERS FOR OS HARDENING ROLE ##==##
+- name: Restart SSH service
+  service:
+    name: sshd
+    state: restarted
+
+- name: Reload firewall
+  command: firewall-cmd --reload
+  when: hardening_enable_firewall | default(false)
+
+- name: Restart auditd service
+  service:
+    name: auditd
+    state: restarted
+  when: hardening_auditd_enabled | default(false)

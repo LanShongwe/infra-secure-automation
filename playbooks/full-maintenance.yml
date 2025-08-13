@@ -1,0 +1,86 @@
+---
+##==## FULL MAINTENANCE CYCLE ##==##
+# Purpose: Apply security patches, perform OS hardening, and verify system health
+# Intended for scheduled maintenance windows in production environments
+
+- name: Full Maintenance Run
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    security_patches: true
+    patch_reboot_if_needed: true
+
+  pre_tasks:
+    - name: Maintenance window notice
+      debug:
+        msg: "=== Starting FULL MAINTENANCE on {{ inventory_hostname }} ==="
+
+    - name: Ensure audit log directory exists
+      file:
+        path: /var/log/infra-secure-maintenance
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+  roles:
+    - role: patch_management
+      vars:
+        patch_security_only: true
+        patch_reboot_if_needed: true
+        patch_package_exclusions: []
+
+    - role: os_hardening
+      vars:
+        harden_ssh: true
+        harden_sysctl: true
+        harden_services: true
+        disable_services:
+          - telnet
+          - rsh
+          - rexec
+        ssh_banner_text: |
+          Authorized use only. All activity is monitored.
+        ssh_permit_root_login: "no"
+        ssh_password_authentication: "no"
+        ssh_max_auth_tries: 3
+        ssh_login_grace_time: 30
+        sysctl_params:
+          net.ipv4.ip_forward: 0
+          net.ipv4.conf.all.accept_redirects: 0
+          net.ipv4.conf.all.send_redirects: 0
+
+  post_tasks:
+    - name: Check if reboot is required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+      changed_when: false
+
+    - name: Reboot the server if required
+      reboot:
+        msg: "Reboot initiated by Ansible due to patching"
+        connect_timeout: 300
+        reboot_timeout: 600
+        pre_reboot_delay: 10
+        post_reboot_delay: 30
+      when: reboot_required_file.stat.exists
+
+    - name: Verify SSH service is running after maintenance
+      service_facts:
+
+    - name: Confirm SSH service is active
+      assert:
+        that:
+          - "'ssh' in svc_facts.services or 'sshd' in svc_facts.services"
+          - (svc_facts.services['ssh'].state == 'running') or (svc_facts.services['sshd'].state == 'running')
+        fail_msg: "SSH service is not running after hardening. Manual intervention required."
+        success_msg: "SSH service verified OK."
+
+    - name: Append maintenance audit log
+      lineinfile:
+        path: /var/log/infra-secure-maintenance/maintenance.log
+        create: yes
+        line: "{{ ansible_date_time.iso8601 }} - {{ inventory_hostname }} - Full maintenance completed."

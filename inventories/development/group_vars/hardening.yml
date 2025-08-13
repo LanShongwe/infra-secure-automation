@@ -1,0 +1,13 @@
+##==## OS HARDENING VARIABLE - DEVELOPMENT  ##==##
+hardening_enable_firewall: false
+hardening_firewall_allowed_ports:
+  - 22
+
+hardening_disable_root_login: false
+hardening_password_policy:
+  min_length: 8
+  require_special_chars: false
+  expire_days: 365
+
+hardening_auditd_enabled: false
+hardening_disable_unused_services: false

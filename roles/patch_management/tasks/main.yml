@@ -1,0 +1,76 @@
+---
+##==## PATCH MANAGEMENT MAIN TASK FILE ##==##
+# Applies OS patches and flags reboot if required
+- name: Update package cache (Debian/Ubuntu)
+  apt:
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+
+- name: Update package cache (RHEL/CentOS/Amazon)
+  yum:
+    update_cache: yes
+  when: ansible_os_family == 'RedHat'
+
+- name: Install security patches only (RHEL/CentOS/Amazon)
+  yum:
+    security: yes
+    state: latest
+  when:
+    - ansible_os_family in ["RedHat", "Amazon"]
+    - patch_security_only | bool
+
+- name: Install all available patches (Debian/Ubuntu)
+  apt:
+    upgrade: 'dist'
+  when:
+    - ansible_os_family == 'Debian'
+    - not patch_security_only | default(false)
+
+- name: Install security patches only (RedHat-based)
+  yum:
+    security: yes
+    name: '*'
+    state: latest
+    exclude: "{{ patch_package_exclusions | join(',') }}"
+  when:
+    - ansible_os_family == 'RedHat'
+    - patch_security_only | default(false)
+
+- name: Install all available patches (RedHat-based)
+  yum:
+    name: '*'
+    state: latest
+    exclude: "{{ patch_package_exclusions | join(',') }}"
+  when:
+    - ansible_os_family == 'RedHat'
+    - not patch_security_only | default(false)
+
+- name: Check if reboot is required (Debian/Ubuntu)
+  stat:
+    path: /var/run/reboot-required
+  register: reboot_required_file
+  when: ansible_os_family == "Debian"
+
+- name: Set reboot_required fact if file exists (Debian/Ubuntu)
+  set_fact:
+    reboot_required: true
+  when: reboot_required_file.stat.exists and patch_reboot_if_needed | default(false)
+
+- name: Check if reboot is required (RHEL/Amazon)
+  command: needs-restarting -r
+  register: reboot_check
+  failed_when: false
+  changed_when: false
+  when: ansible_os_family in ["RedHat", "Amazon"]
+
+- name: Set reboot_required fact if reboot needed (RHEL-based)
+  set_fact:
+    reboot_required: true
+  when:
+    - reboot_check.rc == 1
+    - patch_reboot_if_needed | default(false)
+
+# Optional: Log reboot-required state for debugging
+- name: Debug reboot status
+  debug:
+    msg: "Reboot required: {{ reboot_required | default(false) }}"

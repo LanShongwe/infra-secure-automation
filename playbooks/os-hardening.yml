@@ -1,0 +1,28 @@
+---
+# Purpose: Apply hardening configurations (SSH, sysctl, disable services)
+# Backups are automatically created by the os_hardening role.
+- name: Apply OS hardening
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: os_hardening
+      vars:
+        harden_ssh: true
+        harden_sysctl: true
+        harden_services: true
+        disable_services:
+          - telnet
+          - rsh
+          - rexec
+        ssh_banner_text: |
+          Authorized use only. All activity is monitored.
+        ssh_permit_root_login: "no"
+        ssh_password_authentication: "no"
+        ssh_max_auth_tries: 3
+        ssh_login_grace_time: 30
+        sysctl_params:
+          net.ipv4.ip_forward: 0
+          net.ipv4.conf.all.accept_redirects: 0
+          net.ipv4.conf.all.send_redirects: 0

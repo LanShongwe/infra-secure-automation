@@ -1,0 +1,30 @@
+---
+##==## DEFAULTS SETTINGS FOR OS HARDENING ROLE ##==##
+# Toggle hardening areas
+harden_ssh: true
+harden_sysctl: true
+harden_services: true
+
+##==## SSH Hardening Settings ##==##
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"
+ssh_max_auth_tries: 3
+ssh_login_grace_time: 30
+ssh_banner_text: "Authorized access only. Unauthorized use is prohibited."
+
+# Sysctl Hardening Parameters (CIS-lite) ##==##
+sysctl_params:
+  net.ipv4.ip_forward: 0
+  net.ipv4.conf.all.accept_source_route: 0
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.all.secure_redirects: 0
+  net.ipv4.conf.all.log_martians: 1
+  net.ipv4.icmp_echo_ignore_broadcasts: 1
+  net.ipv4.conf.all.rp_filter: 1
+
+# Services to disable (if installed)
+disable_services:
+  - telnet
+  - rsh
+  - rexec
+  - ftp

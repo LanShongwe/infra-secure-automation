@@ -1,0 +1,95 @@
+---
+##==## ROLLBACK PLAYBOOK ##===##
+# Restores configuration files (sshd_config, sysctl.conf) from the latest backup created by os_hardening.
+# DOES NOT revert package updates. For package rollback, use snapshot/AMI restore.
+- name: Rollback OS hardening changes (config files)
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    backup_root: /var/log/infra-secure-maintenance/backups
+
+  tasks:
+    - name: Find backup runs for this host
+      find:
+        paths: "{{ backup_root }}/{{ inventory_hostname }}"
+        file_type: directory
+        depth: 1
+      register: backup_dirs
+      changed_when: false
+
+    - name: Fail if no backups found
+      fail:
+        msg: "No backups found at {{ backup_root }}/{{ inventory_hostname }}. Cannot rollback configuration changes."
+      when: backup_dirs.matched == 0
+
+    - name: Determine latest backup directory
+      set_fact:
+        latest_backup: "{{ (backup_dirs.files | sort(attribute='path')) | last | basename }}"
+      when: backup_dirs.matched > 0
+
+    - name: Show chosen backup directory
+      debug:
+        msg: "Rolling back using backup: {{ backup_root }}/{{ inventory_hostname }}/{{ latest_backup }}"
+
+    - name: Restore sshd_config if backup exists
+      copy:
+        src: "{{ backup_root }}/{{ inventory_hostname }}/{{ latest_backup }}/sshd_config.bak"
+        dest: /etc/ssh/sshd_config
+        owner: root
+        group: root
+        mode: '0600'
+      when: >
+        (backup_dirs.matched > 0)
+        and
+        (lookup('fileglob', backup_root + '/' + inventory_hostname + '/' + latest_backup + '/sshd_config.bak', errors='ignore') != [])
+      register: sshd_restore
+      ignore_errors: true
+
+    - name: Restore sysctl.conf if backup exists
+      copy:
+        src: "{{ backup_root }}/{{ inventory_hostname }}/{{ latest_backup }}/sysctl.conf.bak"
+        dest: /etc/sysctl.conf
+        owner: root
+        group: root
+        mode: '0644'
+      when: >
+        (backup_dirs.matched > 0)
+        and
+        (lookup('fileglob', backup_root + '/' + inventory_hostname + '/' + latest_backup + '/sysctl.conf.bak', errors='ignore') != [])
+      register: sysctl_restore
+      ignore_errors: true
+
+    - name: Reload sysctl settings if sysctl restored
+      command: sysctl -p
+      when: sysctl_restore is defined and sysctl_restore.changed == true
+      register: sysctl_reload
+      failed_when: false
+
+    - name: Restart SSH service (Debian)
+      service:
+        name: ssh
+        state: restarted
+      when: sshd_restore is defined and sshd_restore.changed == true and ansible_facts['os_family'] == 'Debian'
+
+    - name: Restart SSH service (RHEL)
+      service:
+        name: sshd
+        state: restarted
+      when: sshd_restore is defined and sshd_restore.changed == true and ansible_facts['os_family'] == 'RedHat'
+
+    - name: Log rollback action
+      lineinfile:
+        path: /var/log/infra-secure-maintenance/rollback.log
+        create: yes
+        line: "{{ ansible_date_time.iso8601 }} - {{ inventory_hostname }} - restored backup {{ latest_backup }} - sshd_restored={{ sshd_restore.changed | default(false) }} sysctl_restored={{ sysctl_restore.changed | default(false) }}"
+      run_once: false
+
+    - name: Show rollback summary
+      debug:
+        msg: |
+          Rollback summary for {{ inventory_hostname }}:
+            sshd_restored: {{ sshd_restore.changed | default(false) }}
+            sysctl_restored: {{ sysctl_restore.changed | default(false) }}
+            sysctl_reload: {{ sysctl_reload.stdout | default('not executed') }}

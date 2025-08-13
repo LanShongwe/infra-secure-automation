@@ -1,0 +1,8 @@
+ansible_user: prod_user
+ansible_become: true
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+patch_auto_reboot: true
+patch_check_only: false
+hardening_enable_firewall: true
+hardening_disable_root_login: true

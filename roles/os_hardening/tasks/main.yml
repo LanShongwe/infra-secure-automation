@@ -1,0 +1,27 @@
+---
+##==## MAIN ENTRY POINT FOR OS HARDENING ROLE ##==##
+
+# === Gather basic facts ===
+- name: Gather OS facts
+  setup:
+
+# === Set defaults for backup location ===
+- name: Set default backup variables
+  set_fact:
+    os_hardening_backup_dir: "/var/log/infra-secure-maintenance/backups/{{ inventory_hostname }}"
+    backup_timestamp: "{{ lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ') }}"
+
+# === Ensure backup directory exists ===
+- name: Ensure host-specific backup directory exists
+  become: true
+  file:
+    path: "{{ os_hardening_backup_dir }}/{{ backup_timestamp }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+# === Include audit / apply / verify tasks ===
+- import_tasks: audit.yml
+- import_tasks: apply.yml
+- import_tasks: verify.yml

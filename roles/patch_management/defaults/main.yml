@@ -1,0 +1,42 @@
+---
+##==## Default variables for patch_management role ##==##
+
+##==## PATCH POLICY ##==##
+  # Choose what type of patches to apply:
+  #   1. "security" - only apply security updates
+  #   2. "all"      - apply all available updates
+patch_policy: "security"
+
+#==## KERNEL UPDATE HANDLING #==##
+  # Whether to reboot the system automatically
+  # if the kernel package was updated.
+  #   1. true  - reboot if kernel updated
+  #   2. false - never reboot automatically
+reboot_after_kernel: true
+
+##==## SNAPSHOT SAFETY ##==##
+  # Whether to take a snapshot before patching.
+  # Useful in cloud environments where rollback is possible.
+  # Implementation is left to the playbook wrapper.
+snapshot_before_patch: false
+
+##==## ROLLING/SERIAL PATCHING ##==##
+  # Number of hosts to patch at once.
+  # This value is *role-local*; you can also control this
+  # at the playbook level with `serial`.
+patch_serial: 1
+
+##==## ROLE-SPECIFIC FAILURE TOLERANCE ##==##
+  # Percentage of hosts allowed to fail patching before
+  # aborting the remaining tasks in the play.
+  # NOTE:
+  #    - This is NOT Ansible's built-in `max_fail_percentage`.
+  #    - We renamed it to avoid reserved keyword conflicts.
+  #    - You must implement logic in the role/playbook to use it.
+patch_max_fail_percentage: 10
+
+##==## RETRY BEHAVIOUR FOR VERIFICATION CHECKS ##==##
+  # Number of times to retry post-patch checks
+  # and delay between retries (in seconds).
+check_retries: 5
+check_delay: 5

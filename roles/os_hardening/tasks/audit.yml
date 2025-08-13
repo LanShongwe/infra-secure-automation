@@ -1,0 +1,32 @@
+---
+##==## AUDITS CURRENT SYSTEM SETTINGS BEFORE APPLYING CHANGES ##==##
+- name: Gather OS facts
+  setup:
+
+- name: Audit current SSH settings
+  command: sshd -T
+  register: ssh_audit
+  changed_when: false
+  failed_when: false
+  when: harden_ssh
+  tags: audit
+
+- name: Show current SSH settings
+  debug:
+    msg: "{{ ssh_audit.stdout_lines | default([]) }}"
+  when: harden_ssh
+  tags: audit
+
+- name: Audit sysctl parameters
+  command: sysctl -a
+  register: sysctl_audit
+  changed_when: false
+  failed_when: false
+  when: harden_sysctl
+  tags: audit
+
+- name: Show sysctl audit snippet
+  debug:
+    msg: "{{ sysctl_audit.stdout_lines | select('search', 'net.ipv4') | list }}"
+  when: harden_sysctl
+  tags: audit

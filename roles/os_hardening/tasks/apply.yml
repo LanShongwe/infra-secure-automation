@@ -1,0 +1,124 @@
+---
+##==## APPLIES SECURITY HARDENING CHANGES ##==##
+# Now with pre-change backups so we can roll back safely.
+- name: Ensure backup directory root exists
+  file:
+    path: /var/log/infra-secure-maintenance/backups/{{ inventory_hostname }}
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Set current timestamp fact for backup
+  set_fact:
+    hbackup_ts: "{{ lookup('pipe','date -u +%Y%m%dT%H%M%SZ') }}"
+  run_once: false
+
+- name: Create per-run backup directory
+  file:
+    path: "/var/log/infra-secure-maintenance/backups/{{ inventory_hostname }}/{{ hbackup_ts }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+# --- Backup SSH config if we're going to harden SSH ---
+- name: Backup sshd_config if present
+  copy:
+    src: /etc/ssh/sshd_config
+    dest: "/var/log/infra-secure-maintenance/backups/{{ inventory_hostname }}/{{ hbackup_ts }}/sshd_config.bak"
+    owner: root
+    group: root
+    mode: '0600'
+  when:
+    - harden_ssh
+    - ansible_facts['os_family'] is defined
+    - ansible_facts['distribution_file_variety'] is defined or true
+  ignore_errors: true
+  tags: backup
+
+- name: Backup sysctl.conf if present
+  copy:
+    src: /etc/sysctl.conf
+    dest: "/var/log/infra-secure-maintenance/backups/{{ inventory_hostname }}/{{ hbackup_ts }}/sysctl.conf.bak"
+    owner: root
+    group: root
+    mode: '0600'
+  when: harden_sysctl
+  ignore_errors: true
+  tags: backup
+
+- name: Write backup metadata
+  copy:
+    content: |
+      hostname: {{ inventory_hostname }}
+      timestamp: {{ hbackup_ts }}
+      harden_ssh: {{ harden_ssh }}
+      harden_sysctl: {{ harden_sysctl }}
+      disable_services: {{ disable_services }}
+    dest: "/var/log/infra-secure-maintenance/backups/{{ inventory_hostname }}/{{ hbackup_ts }}/metadata.yml"
+    owner: root
+    group: root
+    mode: '0600'
+  tags: backup
+
+# --- SSH Hardening ---
+- name: Harden SSH config
+  block:
+    - name: Ensure SSH banner file
+      copy:
+        dest: /etc/issue.net
+        content: "{{ ssh_banner_text }}"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Configure sshd_config parameters (ensure lines exist)
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^{{ item.key }}\\s+"
+        line: "{{ item.key }} {{ item.value }}"
+        state: present
+      loop:
+        - { key: "PermitRootLogin", value: "{{ ssh_permit_root_login }}" }
+        - { key: "PasswordAuthentication", value: "{{ ssh_password_authentication }}" }
+        - { key: "MaxAuthTries", value: "{{ ssh_max_auth_tries }}" }
+        - { key: "LoginGraceTime", value: "{{ ssh_login_grace_time }}" }
+        - { key: "Banner", value: "/etc/issue.net" }
+
+    - name: Restart SSH service (Debian)
+      service:
+        name: ssh
+        state: restarted
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Restart SSH service (RHEL)
+      service:
+        name: sshd
+        state: restarted
+      when: ansible_facts['os_family'] == 'RedHat'
+
+  when: harden_ssh
+  tags: ssh
+
+# --- Sysctl Hardening ---
+- name: Apply sysctl parameters
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop: "{{ sysctl_params | dict2items }}"
+  when: harden_sysctl
+  tags: sysctl
+
+# --- Disable Insecure Services ---
+- name: Disable insecure services if installed
+  service:
+    name: "{{ item }}"
+    enabled: no
+    state: stopped
+  loop: "{{ disable_services }}"
+  when: harden_services
+  ignore_errors: true
+  tags: services

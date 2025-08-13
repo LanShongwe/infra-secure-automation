@@ -1,0 +1,9 @@
+##==## PATCH MANAGEMENT VARIABLES - STAGING
+patch_check_only: true          # Only checkS for updates, do not install
+patch_auto_reboot: false
+patch_update_cache: true
+
+patch_exclude_packages:
+  - kernel-debug
+
+patch_notification_email: staging-ops@example.com

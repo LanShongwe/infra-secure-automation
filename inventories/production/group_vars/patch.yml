@@ -1,0 +1,10 @@
+##==## PATCH MANAGEMENT VARIABLES - PRODUCTION
+patch_check_only: false         # Applies updates immediately
+patch_auto_reboot: true         # Automatically reboot if kernel or critical updates applied
+patch_update_cache: true        # Refreshes package list before updates
+
+patch_exclude_packages:         # List of packages to skip updating
+  - kernel-debug
+  - custom-app
+
+patch_notification_email: ops-team@example.com

@@ -1,0 +1,22 @@
+---
+##==## VERIFIES THAT THE APPLIED CHANGES ARE IN EFFECT ##==##
+- name: Verify SSH root login policy
+  command: grep -i '^PermitRootLogin' /etc/ssh/sshd_config
+  register: verify_root_login
+  changed_when: false
+  tags: verify
+
+- name: Show SSH root login policy
+  debug:
+    msg: "{{ verify_root_login.stdout }}"
+
+- name: Verify sysctl settings
+  command: sysctl -n {{ item.key }}
+  register: sysctl_verify
+  changed_when: false
+  loop: "{{ sysctl_params | dict2items }}"
+  tags: verify
+
+- name: Show sysctl verify results
+  debug:
+    msg: "{{ sysctl_verify.results | map(attribute='stdout') | list }}"
